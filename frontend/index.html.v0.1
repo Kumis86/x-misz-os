@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>X-Misz OS</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f1117;
+            color: #ffffff;
+        }
+
+        header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #272b36;
+        }
+
+        .brand {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .version {
+            color: #8b93a7;
+            font-size: 13px;
+        }
+
+        main {
+            padding: 32px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .card {
+            background: #171a22;
+            border: 1px solid #272b36;
+            border-radius: 14px;
+            padding: 24px;
+        }
+
+        .label {
+            color: #8b93a7;
+            font-size: 14px;
+        }
+
+        .value {
+            margin-top: 10px;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px;
+            margin-top: 10px;
+            background: #10131a;
+            border-radius: 10px;
+        }
+
+        .running {
+            color: #69db7c;
+        }
+
+        .stopped {
+            color: #ff8787;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <div class="brand">X-Misz OS</div>
+    <div class="version">v0.1.0 • Origin</div>
+</header>
+
+<main>
+
+    <h2>System Overview</h2>
+
+    <div class="grid">
+
+        <div class="card">
+            <div class="label">CPU</div>
+            <div class="value" id="cpu">--%</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Memory</div>
+            <div class="value" id="memory">--%</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Storage</div>
+            <div class="value" id="disk">--%</div>
+        </div>
+
+    </div>
+
+    <br>
+
+    <div class="card">
+
+        <h2>Docker Containers</h2>
+
+        <div id="containers">
+            Loading...
+        </div>
+
+    </div>
+
+</main>
+
+<script>
+
+const API = "http://192.168.5.186:8080";
+
+
+async function loadSystem() {
+
+    const response = await fetch(`${API}/api/system`);
+    const data = await response.json();
+
+    document.getElementById("cpu").innerText =
+        `${data.cpu.usage.toFixed(1)}%`;
+
+    document.getElementById("memory").innerText =
+        `${data.memory.percent.toFixed(1)}%`;
+
+    document.getElementById("disk").innerText =
+        `${data.disk.percent.toFixed(1)}%`;
+}
+
+
+async function loadContainers() {
+
+    const response = await fetch(`${API}/api/docker`);
+    const data = await response.json();
+
+    const containerElement =
+        document.getElementById("containers");
+
+    if (!data.available) {
+        containerElement.innerHTML =
+            "<p>Docker unavailable</p>";
+        return;
+    }
+
+    if (data.containers.length === 0) {
+        containerElement.innerHTML =
+            "<p>No containers</p>";
+        return;
+    }
+
+    containerElement.innerHTML =
+        data.containers.map(container => {
+
+            const statusClass =
+                container.status === "running"
+                    ? "running"
+                    : "stopped";
+
+            return `
+                <div class="container">
+                    <div>
+                        <strong>${container.name}</strong>
+                        <br>
+                        <small>${container.image}</small>
+                    </div>
+
+                    <div class="${statusClass}">
+                        ${container.status}
+                    </div>
+                </div>
+            `;
+
+        }).join("");
+}
+
+
+async function refresh() {
+
+    try {
+        await loadSystem();
+        await loadContainers();
+    }
+    catch (error) {
+        console.error(error);
+    }
+
+}
+
+
+refresh();
+
+setInterval(refresh, 5000);
+
+</script>
+
+</body>
+</html>
